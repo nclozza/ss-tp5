@@ -18,7 +18,8 @@ public class Engine {
     private Writer fallenParticlesWriter;
 
     public Engine(final double dt, final double dt2, final double totalTime, final String xyzWriterPath, final String fallenParticlesWriterPath) {
-        this.particleSet = generateParticles();
+        this.particleSet = new HashSet<>();
+        generateParticles();
         this.dt = dt;
         this.dt2 = dt2;
         this.totalTime = totalTime;
@@ -56,23 +57,20 @@ public class Engine {
         }
     }
 
-    private Set<Particle> generateParticles() {
-
-        Set<Particle> particles = new HashSet<>();
+    private void generateParticles() {
 
         int i = 0;
         while (i < SystemConfiguration.addParticlesAttempts) {
             Particle particle = generateNewParticle();
 
             if (particle != null) {
-                particles.add(particle);
+                particleSet.add(particle);
             } else {
                 i++;
             }
         }
 
-        System.out.println(particles.size() + " particles generated.");
-        return particles;
+        System.out.println(particleSet.size() + " particles generated.");
     }
 
     private Particle generateNewParticle() {
