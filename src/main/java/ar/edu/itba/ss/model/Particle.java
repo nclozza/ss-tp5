@@ -1,115 +1,219 @@
 package ar.edu.itba.ss.model;
 
-import ar.edu.itba.ss.SystemConfiguration;
+import java.util.Objects;
+import java.util.Optional;
 
 public class Particle {
-    private static int idCounter = 0;
+    private final int id;
+    private final double radius;
+    private final double mass;
 
-    private int id;
-    private Vector position;
-    private Vector speed;
-    private double mass;
-    private double radius;
+    private final Vector previousAcc;
 
-    public Particle(final double positionX, final double positionY, final double speedX, final double speedY, final double mass, final double radius) {
-        this.id = idCounter++;
-        this.position = new Vector(positionX, positionY);
-        this.speed = new Vector(speedX, speedY);
-        this.mass = mass;
-        this.radius = radius;
-    }
+    private final Vector position;
+    private final Vector speed;
 
-    public Particle(final int id, final Vector position, final Vector speed, final double mass, final double radius) {
-        this.id = id;
-        this.position = position;
+    private Optional<Vector> acceleration;
+
+    private Optional<Vector> nextPosition;
+    private Optional<Vector> nextSpeedPredicted;
+
+    private Optional<Vector> nextAcceleration;
+
+    private Optional<Vector> nextSpeedCorrected;
+
+    private double totalFn;
+
+    private boolean isWall;
+
+
+    private Particle(final Particle particle, final Vector position, final Vector speed, final Vector previousAcc) {
+        this.id = particle.id;
+        this.mass = particle.mass;
+        this.radius = particle.radius;
+
+        this.previousAcc = previousAcc;
         this.speed = speed;
-        this.mass = mass;
-        this.radius = radius;
+        this.position = position;
+
+        this.nextPosition = Optional.empty();
+        this.nextSpeedPredicted = Optional.empty();
+        this.nextSpeedCorrected = Optional.empty();
+        this.acceleration = Optional.empty();
+        this.nextAcceleration = Optional.empty();
+        this.totalFn = 0;
     }
 
-    public Particle(final int id, final double positionX, final double positionY, final double speedX, final double speedY, final double mass, final double radius) {
+    public Particle(final int id, final double x, final double y, final double vx, final double vy,
+                    final double radius, final double mass, final boolean isWall) {
         this.id = id;
-        this.position = new Vector(positionX, positionY);
-        this.speed = new Vector(speedX, speedY);
-        this.mass = mass;
         this.radius = radius;
+        this.mass = mass;
+        this.isWall = isWall;
+
+        this.previousAcc = new Vector(0, 0);
+        this.position = new Vector(x, y);
+        this.speed = new Vector(vx, vy);
+        this.nextPosition = Optional.empty();
+        this.nextSpeedPredicted = Optional.empty();
+        this.nextSpeedCorrected = Optional.empty();
+        this.acceleration = Optional.empty();
+        this.nextAcceleration = Optional.empty();
+
     }
 
-    public String print() {
-        return id + "\t" + radius + "\t" + position.getX() + "\t" + position.getY() + "\t" + speed.getX() + "\t" + speed.getY();
+
+    public static Particle of(Particle p, Vector position, Vector speed, Vector previousAcc) {
+        return new Particle(p, position, speed, previousAcc);
     }
 
     public int getId() {
         return id;
     }
 
-    public void setId(final int id) {
-        this.id = id;
-    }
-
     public Vector getPosition() {
         return position;
-    }
-
-    public void setPosition(final Vector position) {
-        this.position = position;
     }
 
     public Vector getSpeed() {
         return speed;
     }
 
-    public void setSpeed(final Vector speed) {
-        this.speed = speed;
+    public double getRadius() {
+        return radius;
     }
 
     public double getMass() {
         return mass;
     }
 
-    public void setMass(final double mass) {
-        this.mass = mass;
+    public Vector getPreviousAcc() {
+        return previousAcc;
     }
 
-    public double getRadius() {
-        return radius;
+    public Vector getAcceleration() {
+        return acceleration.orElseThrow(IllegalStateException::new);
     }
 
-    public void setRadius(final double radius) {
-        this.radius = radius;
+    public Vector getNextAcceleration() {
+        return nextAcceleration.orElseThrow(IllegalStateException::new);
+    }
+
+    public Vector getNextPosition() {
+        return nextPosition.orElseThrow(IllegalStateException::new);
+    }
+
+    public Vector getNextSpeedPredicted() {
+        return nextSpeedPredicted.orElseThrow(IllegalStateException::new);
+    }
+
+    public Vector getNextSpeedCorrected() {
+        return nextSpeedCorrected.orElseThrow(IllegalStateException::new);
+    }
+
+
+    public void setNextPosition(final Vector nextPosition) {
+        if (this.nextPosition.isPresent()) {
+            throw new IllegalStateException();
+        } else {
+            this.nextPosition = Optional.of(nextPosition);
+        }
+    }
+
+    public void setNextSpeedCorrected(final Vector nextVelocity) {
+        if (this.nextSpeedCorrected.isPresent()) {
+            throw new IllegalStateException();
+        } else {
+            this.nextSpeedCorrected = Optional.of(nextVelocity);
+        }
+    }
+
+    public void setNextSpeedPredicted(final Vector nextVelocity) {
+        if (this.nextSpeedPredicted.isPresent()) {
+            throw new IllegalStateException();
+        } else {
+            this.nextSpeedPredicted = Optional.of(nextVelocity);
+        }
+    }
+
+    public void setNextAcceleration(final Vector nextAcceleration) {
+        if (this.nextAcceleration.isPresent()) {
+            throw new IllegalStateException();
+        } else {
+            this.nextAcceleration = Optional.of(nextAcceleration);
+        }
     }
 
     public boolean overlaps(final Particle other) {
-        return this.position.distanceTo(other.position) < radius + other.radius;
+        double distance = this.position.distanceTo(other.position);
+
+        return distance < radius + other.radius;
     }
 
-    private double calculateFn(final double overlap) {
-        return -SystemConfiguration.k_n * overlap;
+    public void setAcceleration(final Vector acceleration) {
+        if (this.acceleration.isPresent()) {
+            throw new IllegalStateException();
+        } else {
+            this.acceleration = Optional.of(acceleration);
+        }
     }
 
-    //    private double calculateFt(final double overlap) {
-//        return -SystemConfiguration.k_t * overlap
-//    }
-//
-//    private double force() {
-//        return -SystemConfiguration.k_n * position - SystemConfiguration.gamma * velocity;
-//    }
-//
-    public double stepBeeman(final double dt) {
-//        double currentAcceleration = this.acceleration();
-//
-//        double previousAcceleration = this.stepEuler(-dt).acceleration();
-//
-//        double nextPosition = position + velocity * dt + ((2.0 / 3) * currentAcceleration - (1.0 / 6) * previousAcceleration) * Math.pow(dt, 2);
-//
-//        double nextPredictedVelocity = velocity + (3.0 / 2) * currentAcceleration * dt - 0.5 * previousAcceleration * dt;
-//
-//        double nextAcceleration = new OscillatorParticle(nextPosition, nextPredictedVelocity, mass).acceleration();
-//
-//        double nextVelocity = velocity + (1.0 / 3) * nextAcceleration * dt + (5.0 / 6) * currentAcceleration * dt - (1.0 / 6) * previousAcceleration * dt;
-//
-//        return new OscillatorParticle(nextPosition, nextVelocity, mass);
-
-        return 0;
+    public double getTotalFn() {
+        return totalFn;
     }
+
+    public void setTotalFn(double totalFn) {
+        if (this.totalFn == 0) {
+            this.totalFn = totalFn;
+        }
+    }
+
+    public void clearFn() {
+        this.totalFn = 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof Particle)) {
+            return false;
+        }
+
+        Particle particle = (Particle) o;
+
+        if (getId() != particle.getId()) {
+            return false;
+        }
+
+        if (Double.compare(particle.getRadius(), getRadius()) != 0) {
+            return false;
+        }
+
+        return Double.compare(particle.getMass(), getMass()) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, radius, mass);
+    }
+
+    public String print() {
+        return id + "\t" + radius + "\t" + position.getX() + "\t" + position.getY() + "\t" + speed.getX() + "\t" + speed.getY() + "\t" + getPression();
+    }
+
+    public static Particle wallParticle(Vector position) {
+        return new Particle(-1, position.getX(), position.getY(), 0, 0, 0.00045, 0, true);
+    }
+
+    public double getPerimeter() {
+        return 2 * Math.PI * radius;
+    }
+
+    public double getPression() {
+        return getTotalFn() * getPerimeter();
+    }
+
 }

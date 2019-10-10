@@ -20,7 +20,7 @@ public class Vector {
             return new Vector(0, 0);
         }
 
-        return this.timesScalar(1 / norm());
+        return this.dividedScalar(norm());
     }
 
     public double getX() {
@@ -35,23 +35,40 @@ public class Vector {
         return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
     }
 
-    public Vector timesScalar(double z) {
+    public Vector timesScalar(final double z) {
         return new Vector(x * z, y * z);
     }
 
-    public Vector plusVector(Vector v) {
+    public Vector plusVector(final Vector v) {
         return new Vector(x + v.x, y + v.y);
     }
 
-    public Vector minusVector(Vector v) {
+    public Vector minusVector(final Vector v) {
         return this.plusVector(v.timesScalar(-1));
     }
 
-    public double distanceTo(Vector v) {
+    public double distanceTo(final Vector v) {
         return this.minusVector(v).norm();
+    }
+
+    public Vector dividedScalar(final double value) {
+        return this.timesScalar(1 / value);
     }
 
     public Vector clone() {
         return new Vector(x, y);
     }
+
+    public double dot(Vector other) {
+        return x * other.x + y * other.y;
+    }
+
+    public double projectedOn(Vector other) {
+        return new Vector(x, y).dot(other.normalize());
+    }
+
+    public Vector tangent() {
+        return new Vector(-y, x);
+    }
+
 }

@@ -13,76 +13,97 @@ public class Engine {
     private double totalTime;
     private double time;
     private double auxTime;
-    private Set<Particle> particleSet;
     private Writer xyzWriter;
     private Writer fallenParticlesWriter;
+    private Output output;
 
-    public Engine(final double dt, final double dt2, final double totalTime, final String xyzWriterPath, final String fallenParticlesWriterPath) {
-        this.particleSet = new HashSet<>();
-        generateParticles();
+    private Set<Particle> particles;
+    private double L;
+    private double W;
+    private double D;
+
+    private double minRadius;
+    private double maxRadius;
+    private double mass;
+
+    // mu = 0.7
+    // gama = 100 kg/s
+
+    public Engine(final double L, final double W, final double D, final double dt, final double dt2,
+                  final double totalTime, final String xyzWriterPath, final String fallenParticlesWriterPath,
+                  final double minRadius, final double maxRadius, final double mass) {
+        this.L = L;
+        this.W = W;
+        this.D = D;
+        this.minRadius = minRadius;
+        this.maxRadius = maxRadius;
+        this.mass = mass;
         this.dt = dt;
         this.dt2 = dt2;
-        this.totalTime = totalTime;
         this.time = 0;
-        this.auxTime = 0;
+        this.totalTime = totalTime;
         this.xyzWriter = new Writer(xyzWriterPath);
         this.fallenParticlesWriter = new Writer(fallenParticlesWriterPath);
+
+        this.particles = new HashSet<>();
+        generateParticles();
+
     }
 
     public void run() {
 
+        Beeman beeman = new Beeman(new Force(L, W, D)
+                , new Neighbour(L, W, 0, maxRadius), dt, particles);
+
+
         while (time < totalTime) {
-            particleSet = integrate();
-            particleSet = removeFallenParticles();
+
+            this.particles = beeman.integrate(particles);
+
+            this.particles = removeAndReAddFallenParticles(time);
+
 
             if (auxTime >= dt2) {
                 auxTime = 0;
-                printParticlesToXyzWriter();
+                Output.writeParticles(xyzWriter, particles);
                 System.out.println("Time: " + time);
             } else {
                 auxTime += dt;
             }
+
+//            getEnergy(energyPrinter);
 
             time += dt;
         }
 
     }
 
-    private void printParticlesToXyzWriter() {
-        xyzWriter.getWriter().println(particleSet.size());
-        xyzWriter.getWriter().println("id \t radius \t positionX \t positionY \t speedX \t speedY");
-
-        for (Particle particle : particleSet) {
-            xyzWriter.getWriter().println(particle.print());
-        }
-    }
-
     private void generateParticles() {
-
         int i = 0;
+        Particle newParticle;
         while (i < SystemConfiguration.addParticlesAttempts) {
-            Particle particle = generateNewParticle();
 
-            if (particle != null) {
-                particleSet.add(particle);
+            newParticle = addParticle();
+            if (newParticle != null) {
+                particles.add(newParticle);
             } else {
                 i++;
             }
         }
 
-        System.out.println(particleSet.size() + " particles generated.");
+        System.out.println(particles.size() + " particles added.");
     }
 
-    private Particle generateNewParticle() {
-        Random random = Helper.getRandom();
+    private Particle addParticle() {
+        Random rand = Helper.getRandom();
 
-        double radius = random.nextDouble() * (SystemConfiguration.maxRadius - SystemConfiguration.minRadius) + SystemConfiguration.minRadius;
-        double x = random.nextDouble() * (SystemConfiguration.W - 2 * radius) + radius;
-        double y = random.nextDouble() * (SystemConfiguration.L - 2 * radius) + radius;
+        double radius = rand.nextDouble() * (maxRadius - minRadius) + minRadius;
+        double x = rand.nextDouble() * (W - 2 * radius) + radius;
+        double y = rand.nextDouble() * (L - 2 * radius) + radius;
 
-        Particle particle = new Particle(x, y, 0, 0, SystemConfiguration.mass, radius);
+        Particle particle = new Particle(particles.size(), x, y, 0, 0, radius, mass, false);
 
-        for (Particle other : particleSet) {
+        for (Particle other : particles) {
             if (particle.overlaps(other)) {
                 return null;
             }
@@ -91,52 +112,48 @@ public class Engine {
         return particle;
     }
 
-    private Set<Particle> integrate() {
-        // Calcular fuerzas, posiciones, etc. para todas las particulas con el metodo de integracion elegido
-
-        return particleSet;
-    }
-
-    private Set<Particle> removeFallenParticles() {
-        Set<Particle> newParticles = new HashSet<>();
-
-        for (Particle particle : particleSet) {
-            if (particle.getPosition().getY() > SystemConfiguration.fallenParticlesY) {
-                newParticles.add(particle);
-            } else {
-                fallenParticlesWriter.getWriter().println(time);
-                reinsertParticle(particle, newParticles);
-            }
-        }
-
-        return newParticles;
-    }
-
-    private void reinsertParticle(final Particle oldParticle, final Set<Particle> newParticles) {
-
-        int id = oldParticle.getId();
-        double radius = oldParticle.getRadius();
-        double y = SystemConfiguration.L;
+    private void reAddParticle(Particle oldParticle, Set<Particle> newParticles) {
+        Random rand = Helper.getRandom();
+        boolean done;
+        double oldParticleRadius = oldParticle.getRadius();
         double x;
+        double y;
         Particle particle;
 
-        Random random = Helper.getRandom();
-
         do {
-            x = random.nextDouble() * (SystemConfiguration.W - 2 * radius) + radius;
-            particle = new Particle(id, x, y, 0, 0, SystemConfiguration.mass, radius);
-        } while (checkOverlap(particle, newParticles));
+            x = rand.nextDouble() * (W - 2 * oldParticleRadius) + oldParticleRadius;
+            y = rand.nextDouble() * (L / 4 - 2 * oldParticleRadius) + oldParticleRadius + L * 3.0 / 4;
+
+            particle = new Particle(oldParticle.getId(), x, y, 0, 0, oldParticleRadius, mass, false);
+
+            done = !isOverlappingOtherParticle(particle, this.particles);
+        } while (!done);
 
         newParticles.add(particle);
     }
 
-    private boolean checkOverlap(final Particle particle, final Set<Particle> particles) {
-        for (Particle other : particles) {
-            if (!particle.equals(other) && particle.overlaps(other)) {
-                return false;
+    private boolean isOverlappingOtherParticle(Particle p, Set<Particle> newParticles) {
+        for (Particle other : newParticles) {
+            if (p.overlaps(other)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Set<Particle> removeAndReAddFallenParticles(double time) {
+        Set<Particle> newParticles = new HashSet<>();
+
+        for (Particle p : this.particles) {
+
+            if (p.getPosition().getY() > SystemConfiguration.fallenParticlesY) {
+                newParticles.add(p);
+            } else {
+                reAddParticle(p, newParticles);
+                fallenParticlesWriter.getWriter().println(time);
             }
         }
 
-        return true;
+        return newParticles;
     }
 }
