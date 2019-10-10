@@ -15,7 +15,6 @@ public class Engine {
     private double auxTime;
     private Writer xyzWriter;
     private Writer fallenParticlesWriter;
-    private Output output;
 
     private Set<Particle> particles;
     private double L;
@@ -26,8 +25,6 @@ public class Engine {
     private double maxRadius;
     private double mass;
 
-    // mu = 0.7
-    // gama = 100 kg/s
 
     public Engine(final double L, final double W, final double D, final double dt, final double dt2,
                   final double totalTime, final String xyzWriterPath, final String fallenParticlesWriterPath,
@@ -52,8 +49,7 @@ public class Engine {
 
     public void run() {
 
-        Beeman beeman = new Beeman(new Force(L, W, D)
-                , new Neighbour(L, W, 0, maxRadius), dt, particles);
+        Beeman beeman = new Beeman(new Force(L, W, D), new Neighbour(L, W, 0, maxRadius), dt, particles);
 
 
         while (time < totalTime) {
@@ -101,7 +97,7 @@ public class Engine {
         double x = rand.nextDouble() * (W - 2 * radius) + radius;
         double y = rand.nextDouble() * (L - 2 * radius) + radius;
 
-        Particle particle = new Particle(particles.size(), x, y, 0, 0, radius, mass, false);
+        Particle particle = new Particle(particles.size(), x, y, 0, 0, radius, mass);
 
         for (Particle other : particles) {
             if (particle.overlaps(other)) {
@@ -124,7 +120,7 @@ public class Engine {
             x = rand.nextDouble() * (W - 2 * oldParticleRadius) + oldParticleRadius;
             y = rand.nextDouble() * (L / 4 - 2 * oldParticleRadius) + oldParticleRadius + L * 3.0 / 4;
 
-            particle = new Particle(oldParticle.getId(), x, y, 0, 0, oldParticleRadius, mass, false);
+            particle = new Particle(oldParticle.getId(), x, y, 0, 0, oldParticleRadius, mass);
 
             done = !isOverlappingOtherParticle(particle, this.particles);
         } while (!done);

@@ -24,8 +24,6 @@ public class Particle {
 
     private double totalFn;
 
-    private boolean isWall;
-
 
     private Particle(final Particle particle, final Vector position, final Vector speed, final Vector previousAcc) {
         this.id = particle.id;
@@ -45,11 +43,10 @@ public class Particle {
     }
 
     public Particle(final int id, final double x, final double y, final double vx, final double vy,
-                    final double radius, final double mass, final boolean isWall) {
+                    final double radius, final double mass) {
         this.id = id;
         this.radius = radius;
         this.mass = mass;
-        this.isWall = isWall;
 
         this.previousAcc = new Vector(0, 0);
         this.position = new Vector(x, y);
@@ -205,7 +202,7 @@ public class Particle {
     }
 
     public static Particle wallParticle(Vector position) {
-        return new Particle(-1, position.getX(), position.getY(), 0, 0, 0.00045, 0, true);
+        return new Particle(-1, position.getX(), position.getY(), 0, 0, 0.00045, 0);
     }
 
     public double getPerimeter() {

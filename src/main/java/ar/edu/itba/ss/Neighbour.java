@@ -13,7 +13,7 @@ public class Neighbour {
     private int gridHeight;
     private Set<Particle> outOfBounds;
 
-    public Neighbour(double height, double width, double interactionRadius, double maxRadius) {
+    public Neighbour(final double height, final double width, final double interactionRadius, final double maxRadius) {
         this.cellWidth = 2 * maxRadius + interactionRadius;
 
         this.gridWidth = (int) Math.ceil(width / cellWidth);
