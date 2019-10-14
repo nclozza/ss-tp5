@@ -160,13 +160,7 @@ public class Particle {
     }
 
     public void setTotalFn(double totalFn) {
-        if (this.totalFn == 0) {
-            this.totalFn = totalFn;
-        }
-    }
-
-    public void clearFn() {
-        this.totalFn = 0;
+        this.totalFn = totalFn;
     }
 
     @Override
@@ -197,20 +191,26 @@ public class Particle {
         return Objects.hash(id, radius, mass);
     }
 
-    public String print() {
-        return id + "\t" + radius + "\t" + position.getX() + "\t" + position.getY() + "\t" + speed.getX() + "\t" + speed.getY() + "\t" + getPression();
+    public String print(double maxPressure) {
+        double green = id == -1 ? 0.8 : 0;
+        double blue = id == -1 ? 0.2 : 0;
+        double actualMaxPressure = Math.min(3, Math.abs(maxPressure));
+        double red = id == -1 ? 0 : getPressure() / (actualMaxPressure != 0 ? actualMaxPressure : 1);
+
+        return id + "\t" + radius + "\t" + position.getX() + "\t" + position.getY() + "\t" + speed.getX() + "\t" + speed.getY() + "\t" + red + "\t" + green + "\t" + blue;
     }
 
     public static Particle wallParticle(Vector position) {
-        return new Particle(-1, position.getX(), position.getY(), 0, 0, 0.00045, 0);
+        return new Particle(-1, position.getX(), position.getY(), 0, 0, 0.0045, 0);
     }
 
     public double getPerimeter() {
         return 2 * Math.PI * radius;
     }
 
-    public double getPression() {
-        return getTotalFn() * getPerimeter();
+    public double getPressure() {
+        final double pressure = getTotalFn() * getPerimeter();
+        return pressure;
     }
 
 }
