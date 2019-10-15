@@ -3,12 +3,32 @@ package ar.edu.itba.ss;
 import ar.edu.itba.ss.model.Particle;
 import ar.edu.itba.ss.model.Vector;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
 public class Output {
+
+    static PrintWriter writer;
+
+    static {
+        try {
+            writer = new PrintWriter("energy.txt", "UTF-8");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    ;
+
+    public static void writeEnergy(double time, double energy) {
+        writer.println(time + "," +energy);
+        writer.flush();
+    }
 
     private static List<Particle> wallParticles;
 

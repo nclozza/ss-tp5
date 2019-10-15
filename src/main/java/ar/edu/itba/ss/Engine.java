@@ -5,6 +5,7 @@ import ar.edu.itba.ss.model.Particle;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Engine {
 
@@ -58,11 +59,13 @@ public class Engine {
 
             this.particles = removeAndReAddFallenParticles(time);
 
-
+            double kineticEnergy = particles.stream().collect(Collectors.summingDouble(particle -> particle.kineticEnergy()));
             if (auxTime >= dt2) {
                 auxTime = 0;
                 Output.writeParticles(xyzWriter, particles);
+                Output.writeEnergy(time, kineticEnergy);
                 System.out.println("Time: " + time);
+//                System.out.println(kineticEnergy);
             } else {
                 auxTime += dt;
             }

@@ -213,4 +213,7 @@ public class Particle {
         return pressure;
     }
 
+    public double kineticEnergy() {
+        return 1d/2d * mass * Math.pow(speed.norm(), 2);
+    }
 }
