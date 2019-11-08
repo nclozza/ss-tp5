@@ -1,106 +1,101 @@
 package ar.edu.itba.ss;
 
+import ar.edu.itba.ss.model.Force;
 import ar.edu.itba.ss.model.Particle;
+import ar.edu.itba.ss.model.Vector;
 
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Engine {
-
-    private double dt;
-    private double dt2;
-    private double totalTime;
-    private double time;
-    private double auxTime;
-    private Writer xyzWriter;
-    private Writer fallenParticlesWriter;
+    SystemConfiguration systemConfiguration;
 
     private Set<Particle> particles;
-    private double L;
-    private double W;
-    private double D;
-
-    private double minRadius;
-    private double maxRadius;
-    private double mass;
+    Map<Integer, Vector> previousAccelerations = new HashMap<>();
+    private Neighbour neighbour;
 
 
-    public Engine(final double L, final double W, final double D, final double dt, final double dt2,
-                  final double totalTime, final String xyzWriterPath, final String fallenParticlesWriterPath,
-                  final double minRadius, final double maxRadius, final double mass) {
-        this.L = L;
-        this.W = W;
-        this.D = D;
-        this.minRadius = minRadius;
-        this.maxRadius = maxRadius;
-        this.mass = mass;
-        this.dt = dt;
-        this.dt2 = dt2;
-        this.time = 0;
-        this.totalTime = totalTime;
-        this.xyzWriter = new Writer(xyzWriterPath);
-        this.fallenParticlesWriter = new Writer(fallenParticlesWriterPath);
-
-        this.particles = new HashSet<>();
-        generateParticles();
-
+    public Engine(SystemConfiguration systemConfiguration) {
+        this.systemConfiguration = systemConfiguration;
+        this.particles = generateParticles();
+        this.neighbour = new Neighbour(systemConfiguration, 0);
     }
 
     public void run() {
+        double time = 0;
+        double auxTime = 0;
 
-        Beeman beeman = new Beeman(new Force(L, W, D), new Neighbour(L, W, 0, maxRadius), dt, particles);
+        while (time < systemConfiguration.totalTime) {
 
-
-        while (time < totalTime) {
-
-            this.particles = beeman.integrate(particles);
+            this.particles = integrate(particles);
 
             this.particles = removeAndReAddFallenParticles(time);
 
             double kineticEnergy = particles.stream().collect(Collectors.summingDouble(particle -> particle.kineticEnergy()));
-            if (auxTime >= dt2) {
+
+            if (auxTime >= systemConfiguration.dt2) {
                 auxTime = 0;
-                Output.writeParticles(xyzWriter, particles);
+                Output.writeParticles(systemConfiguration, particles);
                 Output.writeEnergy(time, kineticEnergy);
                 System.out.println("Time: " + time);
 //                System.out.println(kineticEnergy);
             } else {
-                auxTime += dt;
+                auxTime += systemConfiguration.dt;
             }
 
 //            getEnergy(energyPrinter);
 
-            time += dt;
+            time += systemConfiguration.dt;
         }
 
     }
 
-    private void generateParticles() {
+
+    public Set<Particle> integrate(Set<Particle> allParticles) {
+        Map<Integer, Set<Particle>> allNeighbours = neighbour.getNeighbours(allParticles);
+        Set<Particle> newParticles = new HashSet<>();
+        Force force = new Force(systemConfiguration);
+
+        for (Particle particle : allParticles) {
+            Set<Particle> neighboursForParticle = allNeighbours.get(particle.id);
+            Vector previousAcceleration = previousAccelerations.getOrDefault(particle.id, new Vector(0, 0));
+
+            Particle newParticle = particle.integrationStep(force, systemConfiguration.dt, previousAcceleration, neighboursForParticle);
+            newParticles.add(newParticle);
+
+            previousAccelerations.put(particle.id, force.calculate(particle, neighboursForParticle).second().dividedScalar(particle.mass));
+        }
+
+        return newParticles;
+    }
+
+    private Set<Particle> generateParticles() {
+        Set<Particle> particles = new HashSet<>();
+
         int i = 0;
         Particle newParticle;
-        while (i < SystemConfiguration.addParticlesAttempts) {
+        while (i < systemConfiguration.addParticlesAttempts) {
 
-            newParticle = addParticle();
+            newParticle = addParticle(particles);
             if (newParticle != null) {
                 particles.add(newParticle);
             } else {
                 i++;
             }
         }
-
         System.out.println(particles.size() + " particles added.");
+
+        return particles;
     }
 
-    private Particle addParticle() {
+    private Particle addParticle(Set<Particle> particles) {
         Random rand = Helper.getRandom();
 
-        double radius = rand.nextDouble() * (maxRadius - minRadius) + minRadius;
-        double x = rand.nextDouble() * (W - 2 * radius) + radius;
-        double y = rand.nextDouble() * (L - 2 * radius) + radius;
+        double radius = rand.nextDouble() * (systemConfiguration.maxRadius - systemConfiguration.minRadius) + systemConfiguration.minRadius;
+        double x = rand.nextDouble() * (systemConfiguration.W - 2 * radius) + radius;
+        double y = rand.nextDouble() * (systemConfiguration.L - 2 * radius) + radius;
 
-        Particle particle = new Particle(particles.size(), x, y, 0, 0, radius, mass);
+        Particle particle = new Particle(particles.size(), x, y, 0, 0, radius, systemConfiguration.mass);
 
         for (Particle other : particles) {
             if (particle.overlaps(other)) {
@@ -111,24 +106,21 @@ public class Engine {
         return particle;
     }
 
-    private void reAddParticle(Particle oldParticle, Set<Particle> newParticles) {
-        Random rand = Helper.getRandom();
-        boolean done;
-        double oldParticleRadius = oldParticle.getRadius();
+    private Particle relocateFallenParticle(Particle oldParticle, Set<Particle> newParticles) {
+        double radius = oldParticle.radius;
         double x;
         double y;
-        Particle particle;
+        Particle newParticle;
 
         do {
-            x = rand.nextDouble() * (W - 2 * oldParticleRadius) + oldParticleRadius;
-            y = rand.nextDouble() * (L / 4 - 2 * oldParticleRadius) + oldParticleRadius + L * 3.0 / 4;
+            x = Helper.randomDouble(radius, systemConfiguration.W - 2 * radius);
+            y = Helper.randomDouble(systemConfiguration.L * 3.0 / 4 + radius, systemConfiguration.L - 2 * radius);
+//            y = rand.nextDouble() * (systemConfiguration.L / 4 - 2 * oldParticleRadius) + oldParticleRadius + systemConfiguration.L * 3.0 / 4;
 
-            particle = new Particle(oldParticle.getId(), x, y, 0, 0, oldParticleRadius, mass);
+            newParticle = new Particle(oldParticle.id, x, y, 0, 0, radius, systemConfiguration.mass);
+        } while (isOverlappingOtherParticle(newParticle, newParticles));
 
-            done = !isOverlappingOtherParticle(particle, this.particles);
-        } while (!done);
-
-        newParticles.add(particle);
+        return newParticle;
     }
 
     private boolean isOverlappingOtherParticle(Particle p, Set<Particle> newParticles) {
@@ -143,14 +135,22 @@ public class Engine {
     private Set<Particle> removeAndReAddFallenParticles(double time) {
         Set<Particle> newParticles = new HashSet<>();
 
-        for (Particle p : this.particles) {
+        Set<Particle> fallenParticles = new HashSet<>();
 
-            if (p.getPosition().getY() > SystemConfiguration.fallenParticlesY) {
-                newParticles.add(p);
+        // First, re-add all particles that did not fall
+        for (Particle particle : this.particles) {
+            if (particle.position.y > systemConfiguration.fallenParticlesY) {
+                newParticles.add(particle);
             } else {
-                reAddParticle(p, newParticles);
-                fallenParticlesWriter.getWriter().println(time);
+                fallenParticles.add(particle);
             }
+        }
+
+        // Second, re-add all fallen particles at the top
+        for (Particle fallenParticle : fallenParticles) {
+            Particle newParticle = relocateFallenParticle(fallenParticle, newParticles);
+            newParticles.add(newParticle);
+            Output.writeFallenParticleTime(time);
         }
 
         return newParticles;

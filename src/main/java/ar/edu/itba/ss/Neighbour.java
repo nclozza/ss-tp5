@@ -6,34 +6,34 @@ import ar.edu.itba.ss.model.Particle;
 import java.util.*;
 
 public class Neighbour {
-
     private double cellWidth;
     private Cell[][] grid;
     private int gridWidth;
     private int gridHeight;
     private Set<Particle> outOfBounds;
 
-    public Neighbour(final double height, final double width, final double interactionRadius, final double maxRadius) {
-        this.cellWidth = 2 * maxRadius + interactionRadius;
-
-        this.gridWidth = (int) Math.ceil(width / cellWidth);
-        this.gridHeight = (int) Math.ceil(height / cellWidth);
+    public Neighbour(SystemConfiguration systemConfiguration, final double interactionRadius) {
+        this.cellWidth = 2 * systemConfiguration.maxRadius + interactionRadius;
+        this.gridWidth = (int) Math.ceil(systemConfiguration.W / cellWidth);
+        this.gridHeight = (int) Math.ceil(systemConfiguration.L / cellWidth);
         this.outOfBounds = new HashSet<>();
-
-        grid = new Cell[gridWidth][gridHeight];
-        initializeGrid();
+        this.grid = initializeGrid();
     }
 
-    private void initializeGrid() {
+    private Cell[][] initializeGrid() {
+        Cell[][] grid = new Cell[gridWidth][gridHeight];
+
         for (int i = 0; i < gridWidth; i++) {
             for (int j = 0; j < gridHeight; j++) {
                 grid[i][j] = new Cell(i, j);
             }
         }
+
+        return grid;
     }
 
-    public Map<Particle, Set<Particle>> getNeighbours(Set<Particle> allParticles) {
-        Map<Particle, Set<Particle>> neighbours = new HashMap<>();
+    public Map<Integer, Set<Particle>> getNeighbours(Set<Particle> allParticles) {
+        Map<Integer, Set<Particle>> neighbours = new HashMap<>();
 
         clearGrid();
 
@@ -43,12 +43,13 @@ public class Neighbour {
             for (int j = 0; j < gridHeight; j++) {
                 Set<Particle> cellNeighbours = getNearMolecules(grid[i][j]);
                 for (Particle p : grid[i][j].getParticles()) {
-                    neighbours.put(p, cellNeighbours);
+                    neighbours.put(p.id, cellNeighbours);
                 }
             }
         }
+
         for (Particle particle : outOfBounds) {
-            neighbours.put(particle, Collections.EMPTY_SET);
+            neighbours.put(particle.id, Collections.EMPTY_SET);
         }
 
         return neighbours;
@@ -56,8 +57,8 @@ public class Neighbour {
 
     private void addParticlesToGrid(Set<Particle> particles) {
         for (Particle p : particles) {
-            int x = (int) (p.getPosition().getX() / cellWidth);
-            int y = (int) (p.getPosition().getY() / cellWidth);
+            int x = (int) (p.position.x / cellWidth);
+            int y = (int) (p.position.y / cellWidth);
 
             if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
                 grid[x][y].addParticle(p);

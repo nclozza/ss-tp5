@@ -1,44 +1,26 @@
 package ar.edu.itba.ss.model;
 
+import ar.edu.itba.ss.SystemConfiguration;
+
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class Particle {
-    private final int id;
-    private final double radius;
-    private final double mass;
-
-    private final Vector previousAcc;
-
-    private final Vector position;
-    private final Vector speed;
-
-    private Optional<Vector> acceleration;
-
-    private Optional<Vector> nextPosition;
-    private Optional<Vector> nextSpeedPredicted;
-
-    private Optional<Vector> nextAcceleration;
-
-    private Optional<Vector> nextSpeedCorrected;
-
-    private double totalFn;
+    public final int id;
+    public final double radius;
+    public final double mass;
+    public final Vector position;
+    public final Vector speed;
+    public double totalFn;
 
 
-    private Particle(final Particle particle, final Vector position, final Vector speed, final Vector previousAcc) {
+    private Particle(final Particle particle, final Vector position, final Vector speed) {
         this.id = particle.id;
         this.mass = particle.mass;
         this.radius = particle.radius;
-
-        this.previousAcc = previousAcc;
         this.speed = speed;
         this.position = position;
-
-        this.nextPosition = Optional.empty();
-        this.nextSpeedPredicted = Optional.empty();
-        this.nextSpeedCorrected = Optional.empty();
-        this.acceleration = Optional.empty();
-        this.nextAcceleration = Optional.empty();
         this.totalFn = 0;
     }
 
@@ -47,98 +29,29 @@ public class Particle {
         this.id = id;
         this.radius = radius;
         this.mass = mass;
-
-        this.previousAcc = new Vector(0, 0);
         this.position = new Vector(x, y);
         this.speed = new Vector(vx, vy);
-        this.nextPosition = Optional.empty();
-        this.nextSpeedPredicted = Optional.empty();
-        this.nextSpeedCorrected = Optional.empty();
-        this.acceleration = Optional.empty();
-        this.nextAcceleration = Optional.empty();
-
+        this.totalFn = 0;
     }
 
 
-    public static Particle of(Particle p, Vector position, Vector speed, Vector previousAcc) {
-        return new Particle(p, position, speed, previousAcc);
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public Vector getPosition() {
-        return position;
-    }
-
-    public Vector getSpeed() {
-        return speed;
-    }
-
-    public double getRadius() {
-        return radius;
-    }
-
-    public double getMass() {
-        return mass;
-    }
-
-    public Vector getPreviousAcc() {
-        return previousAcc;
-    }
-
-    public Vector getAcceleration() {
-        return acceleration.orElseThrow(IllegalStateException::new);
-    }
-
-    public Vector getNextAcceleration() {
-        return nextAcceleration.orElseThrow(IllegalStateException::new);
-    }
-
-    public Vector getNextPosition() {
-        return nextPosition.orElseThrow(IllegalStateException::new);
-    }
-
-    public Vector getNextSpeedPredicted() {
-        return nextSpeedPredicted.orElseThrow(IllegalStateException::new);
-    }
-
-    public Vector getNextSpeedCorrected() {
-        return nextSpeedCorrected.orElseThrow(IllegalStateException::new);
+    private Particle(int id, double mass, double radius, final Vector position, final Vector speed) {
+        this.id = id;
+        this.mass = mass;
+        this.radius = radius;
+        this.speed = speed;
+        this.position = position;
+        this.totalFn = 0;
     }
 
 
-    public void setNextPosition(final Vector nextPosition) {
-        if (this.nextPosition.isPresent()) {
-            throw new IllegalStateException();
-        } else {
-            this.nextPosition = Optional.of(nextPosition);
-        }
+    public static Particle of(Particle p, Vector position, Vector speed) {
+        return new Particle(p, position, speed);
     }
 
-    public void setNextSpeedCorrected(final Vector nextVelocity) {
-        if (this.nextSpeedCorrected.isPresent()) {
-            throw new IllegalStateException();
-        } else {
-            this.nextSpeedCorrected = Optional.of(nextVelocity);
-        }
-    }
 
-    public void setNextSpeedPredicted(final Vector nextVelocity) {
-        if (this.nextSpeedPredicted.isPresent()) {
-            throw new IllegalStateException();
-        } else {
-            this.nextSpeedPredicted = Optional.of(nextVelocity);
-        }
-    }
-
-    public void setNextAcceleration(final Vector nextAcceleration) {
-        if (this.nextAcceleration.isPresent()) {
-            throw new IllegalStateException();
-        } else {
-            this.nextAcceleration = Optional.of(nextAcceleration);
-        }
+    public static Particle of(int id, double mass, double radius, Vector position, Vector speed) {
+        return new Particle(id, mass, radius, position, speed);
     }
 
     public boolean overlaps(final Particle other) {
@@ -147,73 +60,94 @@ public class Particle {
         return distance < radius + other.radius;
     }
 
-    public void setAcceleration(final Vector acceleration) {
-        if (this.acceleration.isPresent()) {
-            throw new IllegalStateException();
-        } else {
-            this.acceleration = Optional.of(acceleration);
-        }
-    }
-
-    public double getTotalFn() {
-        return totalFn;
-    }
-
-    public void setTotalFn(double totalFn) {
-        this.totalFn = totalFn;
-    }
-
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
         if (!(o instanceof Particle)) {
             return false;
         }
 
         Particle particle = (Particle) o;
 
-        if (getId() != particle.getId()) {
+        if (this.id != particle.id) {
             return false;
         }
 
-        if (Double.compare(particle.getRadius(), getRadius()) != 0) {
+        if (radius != particle.radius) {
             return false;
         }
 
-        return Double.compare(particle.getMass(), getMass()) == 0;
+        return this.mass == particle.mass;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, radius, mass);
+    public static Particle wallParticle(Vector position) {
+        return new Particle(-1, position.x, position.y, 0, 0, 0.0045, 0);
+    }
+
+    public double perimeter() {
+        return 2 * Math.PI * radius;
+    }
+
+    public double pressure() {
+        return this.totalFn * perimeter();
+    }
+
+    public double kineticEnergy() {
+        return 1d / 2d * mass * Math.pow(speed.norm(), 2);
     }
 
     public String print(double maxPressure) {
         double green = id == -1 ? 0.8 : 0;
         double blue = id == -1 ? 0.2 : 0;
         double actualMaxPressure = Math.min(3, Math.abs(maxPressure));
-        double red = id == -1 ? 0 : getPressure() / (actualMaxPressure != 0 ? actualMaxPressure : 1);
+        double red = id == -1 ? 0 : pressure() / (actualMaxPressure != 0 ? actualMaxPressure : 1);
 
-        return id + "\t" + radius + "\t" + position.getX() + "\t" + position.getY() + "\t" + speed.getX() + "\t" + speed.getY() + "\t" + red + "\t" + green + "\t" + blue;
+//        return id + "\t" + radius + "\t" + position.x + "\t" + position.y + "\t" + speed.x + "\t" + speed.y + "\t" + red + "\t" + green + "\t" + blue;
+        return id + "\t" + radius + "\t" + position.x + "\t" + position.y + "\t" + speed.x + "\t" + speed.y + "\t" + pressure() / actualMaxPressure;
     }
 
-    public static Particle wallParticle(Vector position) {
-        return new Particle(-1, position.getX(), position.getY(), 0, 0, 0.0045, 0);
+    public int hashCode() {
+        return position.hashCode() + speed.hashCode();
     }
 
-    public double getPerimeter() {
-        return 2 * Math.PI * radius;
-    }
+    public Particle integrationStep(Force force, double dt, Vector previousAcceleration, Set<Particle> neighbours) {
 
-    public double getPressure() {
-        final double pressure = getTotalFn() * getPerimeter();
-        return pressure;
-    }
+        // Using the implementation from the "Predictor-corrector modifications" section of
+        // https://en.wikipedia.org/wiki/Beeman%27s_algorithm
 
-    public double kineticEnergy() {
-        return 1d/2d * mass * Math.pow(speed.norm(), 2);
+        Pair<Double, Vector> totalFnAndForce =force.calculate(this, neighbours);
+        Vector currentAcceleration = totalFnAndForce.second().dividedScalar(this.mass);
+
+        /////// POSITION ///////
+        // x(t + dt) = x(t) + v(t)*dt + 2/3 * a(t) dt^2 - 1/6 a(t-dt) dt^2
+
+        // accelerationTermForPosition = 2/3 * a(t) dt^2 - 1/6 a(t - dt) dt^2
+        Vector accelerationTermForPosition = currentAcceleration.timesScalar(2d / 3d).timesScalar(Math.pow(dt, 2)).minusVector(previousAcceleration.timesScalar(1d / 6d).timesScalar(Math.pow(dt, 2)));
+
+        // newPosition: x(t + dt) = x(t) + v(t)*dt + (2/3 * a(t) dt^2 - 1/6 a(t-dt) dt^2)
+        Vector newPosition = position.plusVector(speed.timesScalar(dt)).plusVector(accelerationTermForPosition);
+
+        /////// SPEED ///////
+
+        // v(t + dt) (predicted) = v(t) + 3/2 a(t) dt - 1/2 a(t-dt) dt
+
+        // v(t + dt) (corrected) = v(t) + 5/12 a(t+dt) dt + 2/3 a(t) dt - 1/12 a(t-dt) dt;
+
+        // newSpeedPredicted: v(t+dt) (predicted) = v(t) + 3/2 a(t) dt - 1/2 a(t-dt) dt
+        Vector newSpeedPredicted = speed.plusVector(currentAcceleration.timesScalar(3d / 2d).timesScalar(dt)).minusVector(previousAcceleration.timesScalar(1 / 2).timesScalar(dt));
+
+        Particle predictedParticle = new Particle(this.id, this.mass, this.radius, newPosition, newSpeedPredicted);
+
+        // a(t + dt)
+        Vector newAcceleration = force.calculate(predictedParticle, neighbours).second();
+
+        // v(t + dt) (corrected) = v(t) + 5/12 a(t+dt) dt + 2/3 a(t) dt - 1/12 a(t-dt) dt;
+        Vector newSpeedCorrected = speed.plusVector(newAcceleration.timesScalar(5d / 12d).timesScalar(dt)).plusVector(currentAcceleration.timesScalar(2d / 3d).timesScalar(dt)).minusVector(previousAcceleration.timesScalar(1d / 12d).timesScalar(dt));
+
+
+        // Set totalFn for pressure
+        Particle newParticle = new Particle(this.id, this.mass, this.radius, newPosition, newSpeedCorrected);
+        newParticle.totalFn = totalFnAndForce.first();
+
+        return newParticle;
     }
 }

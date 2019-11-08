@@ -15,4 +15,8 @@ public class Helper {
 
         return random;
     }
+
+    public static double randomDouble(double min, double max) {
+        return (getRandom().nextDouble() * (max - min)) + min;
+    }
 }

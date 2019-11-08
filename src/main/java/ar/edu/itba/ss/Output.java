@@ -10,10 +10,24 @@ import java.util.List;
 import java.util.Set;
 
 public class Output {
-
-    static PrintWriter writer;
-
+    private static PrintWriter writer;
+    private static PrintWriter xyzWriter;
+    private static PrintWriter fallenParticlesWriter;
     static {
+        try {
+            fallenParticlesWriter = new PrintWriter("fallen_particles.txt", "UTF-8");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        try {
+            xyzWriter = new PrintWriter("output.xyz", "UTF-8");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         try {
             writer = new PrintWriter("energy.txt", "UTF-8");
         } catch (FileNotFoundException e) {
@@ -26,32 +40,32 @@ public class Output {
     ;
 
     public static void writeEnergy(double time, double energy) {
-        writer.println(time + "," +energy);
+        writer.println(time + "," + energy);
         writer.flush();
     }
 
     private static List<Particle> wallParticles;
 
-    public static void writeParticles(final Writer writer, final Set<Particle> particles) {
-        List<Particle> wallParticles = generateWallParticles();
-        writer.getWriter().println(particles.size() + wallParticles.size());
-        writer.getWriter().println("id \t radius \t positionX \t positionY \t speedX \t speedY \t pressure");
+    public static void writeParticles(SystemConfiguration systemConfiguration, final Set<Particle> particles) {
+        List<Particle> wallParticles = generateWallParticles(systemConfiguration);
+        xyzWriter.println(particles.size() + wallParticles.size());
+        xyzWriter.println("id \t radius \t positionX \t positionY \t speedX \t speedY \t pressure");
 
         // Decorative wall particles
         for (Particle wallParticle : wallParticles) {
-            writer.getWriter().println(wallParticle.print(0));
+            xyzWriter.println(wallParticle.print(0));
         }
 
 
-        double maximumPressure = particles.stream().map(p -> p.getPressure()).max(Comparator.comparing(i -> i)).get();
+        double maximumPressure = particles.stream().map(p -> p.pressure()).max(Comparator.comparing(i -> i)).orElse(1d);
 
         // Real particles
         for (Particle particle : particles) {
-            writer.getWriter().println(particle.print(maximumPressure));
+            xyzWriter.println(particle.print(maximumPressure));
         }
     }
 
-    private static List<Particle> generateWallParticles() {
+    private static List<Particle> generateWallParticles(SystemConfiguration systemConfiguration) {
         if (wallParticles != null) {
             return wallParticles;
         }
@@ -60,20 +74,29 @@ public class Output {
         double step = 0.005;
 
         // Vertical walls
-        for (double y = SystemConfiguration.fallenParticlesY; y < SystemConfiguration.L; y += step) {
+        for (double y = systemConfiguration.fallenParticlesY; y < systemConfiguration.L; y += step) {
             wallParticles.add(Particle.wallParticle(new Vector(0, y)));
-            wallParticles.add(Particle.wallParticle(new Vector(SystemConfiguration.W, y)));
+            wallParticles.add(Particle.wallParticle(new Vector(systemConfiguration.W, y)));
         }
 
         // Horizontal walls
-        for (double x = 0; x < SystemConfiguration.W; x += step) {
-            wallParticles.add(Particle.wallParticle(new Vector(x, SystemConfiguration.L)));
-            wallParticles.add(Particle.wallParticle(new Vector(x, SystemConfiguration.fallenParticlesY)));
-            if (x <= SystemConfiguration.holeStart.getX() || x >= SystemConfiguration.holeEnd.getX()) {
+        for (double x = 0; x < systemConfiguration.W; x += step) {
+            wallParticles.add(Particle.wallParticle(new Vector(x, systemConfiguration.L)));
+//            wallParticles.add(Particle.wallParticle(new Vector(x, systemConfiguration.fallenParticlesY)));
+
+            // Hole
+            if (x <= systemConfiguration.holeStart().x || x >= systemConfiguration.holeEnd().x) {
                 wallParticles.add(Particle.wallParticle(new Vector(x, 0)));
             }
         }
 
         return wallParticles;
     }
+
+    public static void writeFallenParticleTime(double time) {
+        fallenParticlesWriter.println(time);
+    }
+
+
 }
+

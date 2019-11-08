@@ -1,9 +1,8 @@
 package ar.edu.itba.ss.model;
 
 public class Vector {
-
-    private final double x;
-    private final double y;
+    public final double x;
+    public final double y;
 
     public Vector(final double x, final double y) {
         this.x = x;
@@ -21,14 +20,6 @@ public class Vector {
         }
 
         return this.dividedScalar(norm());
-    }
-
-    public double getX() {
-        return x;
-    }
-
-    public double getY() {
-        return y;
     }
 
     public double norm() {
@@ -55,10 +46,6 @@ public class Vector {
         return this.timesScalar(1 / value);
     }
 
-    public Vector clone() {
-        return new Vector(x, y);
-    }
-
     public double dot(Vector other) {
         return x * other.x + y * other.y;
     }
@@ -70,5 +57,4 @@ public class Vector {
     public Vector tangent() {
         return new Vector(-y, x);
     }
-
 }
