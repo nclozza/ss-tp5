@@ -1,49 +1,55 @@
 package ar.edu.itba.ss.model;
 
+import ar.edu.itba.ss.Helper;
 import ar.edu.itba.ss.SystemConfiguration;
-import ar.edu.itba.ss.model.Pair;
-import ar.edu.itba.ss.model.Particle;
-import ar.edu.itba.ss.model.Vector;
 
 import java.util.Set;
 
-public class Force {
+public class ForceCalculator {
     private final SystemConfiguration systemConfiguration;
 
-    public Force(SystemConfiguration systemConfiguration) {
+    public ForceCalculator(SystemConfiguration systemConfiguration) {
         this.systemConfiguration = systemConfiguration;
     }
 
     public Pair<Double, Vector> calculate(final Particle particle, final Set<Particle> neighbours) {
-        Vector force = new Vector(0, -particle.mass * systemConfiguration.g);
+        Pair<Double, Vector> forcePair = Pair.of(0d, new Vector(0, -particle.mass * systemConfiguration.g));
 
-        double totalFn = 0;
 
         for (Particle other : neighbours) {
-            Pair<Double, Vector> f = particleForce(particle, other);
-            totalFn += f.first();
-            force = force.plusVector(f.second());
+            Pair<Double, Vector> particleForce = particleForce(particle, other);
+            forcePair = addPairs(forcePair, particleForce);
         }
 
 
+        ////// WALLS //////
         // Particles at the ends of the hole
         Particle wallPart1 = new Particle(40000, systemConfiguration.holeStart().x, 0, 0, 0, systemConfiguration.minRadius, systemConfiguration.mass);
         Particle wallPart2 = new Particle(40000, systemConfiguration.holeEnd().x, 0, 0, 0, systemConfiguration.minRadius, systemConfiguration.mass);
 
 
         Pair<Double, Vector> forceWalls = getWallForces(particle);
-        force = force.plusVector(forceWalls.second());
-        totalFn += forceWalls.first();
+        forcePair = addPairs(forcePair, forceWalls);
 
         Pair<Double, Vector> forceWallPart1 = particleForce(particle, wallPart1);
-        force = force.plusVector(forceWallPart1.second());
-        totalFn += forceWallPart1.first();
+        forcePair = addPairs(forcePair, forceWallPart1);
 
         Pair<Double, Vector> forceWallPart2 = particleForce(particle, wallPart2);
-        force = force.plusVector(forceWallPart2.second());
-        totalFn += forceWallPart2.first();
+        forcePair = addPairs(forcePair, forceWallPart2);
 
-        return Pair.of(totalFn, force);
+        ////// OBSTACLE //////
+        Pair<Double, Vector> obstacleForce = obstacle(particle);
+        forcePair = addPairs(forcePair, obstacleForce);
+
+        ////// CURVED WALLS //////
+        Pair<Double, Vector> leftCurvedWallForce = leftCurvedWall(particle);
+        forcePair = addPairs(forcePair, leftCurvedWallForce);
+
+        Pair<Double, Vector> rightCurvedWallForce = rightCurvedWall(particle);
+        forcePair = addPairs(forcePair, rightCurvedWallForce);
+
+        ////// TOTAL FORCE //////
+        return forcePair;
     }
 
     private Pair<Double, Vector> particleForce(final Particle particle, final Particle other) {
@@ -164,5 +170,59 @@ public class Force {
         double forceY = systemConfiguration.k_n * horizBorderOverlap;
 
         return Pair.of(Math.abs(forceY), new Vector(0, forceY));
+    }
+
+
+    private Pair<Double, Vector> obstacle(final Particle particle) {
+        double overlap = particle.radius + systemConfiguration.obstacleRadius - particle.position.minusVector(systemConfiguration.obstacleCenter).norm();
+
+        double fn = 0;
+        double ft = 0;
+        Vector en = systemConfiguration.obstacleCenter.minusVector(particle.position).normalize();
+
+        if (overlap > 0) {
+            Vector direction = systemConfiguration.obstacleCenter.minusVector(particle.position).tangent();
+
+            double relativeSpeed = particle.speed.projectedOn(direction);
+
+            fn = getFn(overlap);
+            ft = getFt(overlap, relativeSpeed);
+        }
+
+        return Pair.of(Math.abs(fn), new Vector(fn * en.x - ft * en.y, fn * en.y + ft * en.x));
+    }
+
+
+    private Pair<Double, Vector> leftCurvedWall(final Particle particle) {
+        Pair<Vector, Vector> topAndBottom = systemConfiguration.leftCurvedWallEndpoints();
+        Vector wallParticlePosition = closestPoint(topAndBottom.first(), topAndBottom.second(), particle.position);
+
+        return particleForce(particle, Particle.of(-1, systemConfiguration.mass, systemConfiguration.wallParticleRadius, wallParticlePosition, new Vector(0, 0)));
+    }
+
+    private Pair<Double, Vector> rightCurvedWall(final Particle particle) {
+        Pair<Vector, Vector> topAndBottom = systemConfiguration.rightCurvedWallEndpoints();
+        Vector wallParticlePosition = closestPoint(topAndBottom.first(), topAndBottom.second(), particle.position);
+
+        return particleForce(particle, Particle.of(-1, systemConfiguration.mass, systemConfiguration.wallParticleRadius, wallParticlePosition, new Vector(0, 0)));
+    }
+
+    // Finds the closest point over a line segment AB to a point P
+    public Vector closestPoint(Vector A, Vector B, Vector P) {
+        Vector a_to_p = P.minusVector(A);
+        Vector a_to_b = B.minusVector(A);
+
+
+        double atb2 = Math.pow(a_to_b.norm(), 2);
+
+        double aToPdotAtoB = a_to_p.dot(a_to_b);
+
+        double t = Helper.clamp(aToPdotAtoB / atb2, 0, 1);
+
+        return new Vector(A.x + a_to_b.x * t, A.y + a_to_b.y * t);
+    }
+
+    private Pair<Double, Vector> addPairs(Pair<Double, Vector> pair1, Pair<Double, Vector> pair2) {
+        return Pair.of(pair1.first() + pair2.first(), pair1.second().plusVector(pair2.second()));
     }
 }

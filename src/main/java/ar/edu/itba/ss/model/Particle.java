@@ -1,9 +1,5 @@
 package ar.edu.itba.ss.model;
 
-import ar.edu.itba.ss.SystemConfiguration;
-
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 public class Particle {
@@ -79,8 +75,8 @@ public class Particle {
         return this.mass == particle.mass;
     }
 
-    public static Particle wallParticle(Vector position) {
-        return new Particle(-1, position.x, position.y, 0, 0, 0.0045, 0);
+    public static Particle wallParticle(Vector position, double radius) {
+        return new Particle(-1, position.x, position.y, 0, 0, radius, 0);
     }
 
     public double perimeter() {
@@ -109,12 +105,18 @@ public class Particle {
         return position.hashCode() + speed.hashCode();
     }
 
-    public Particle integrationStep(Force force, double dt, Vector previousAcceleration, Set<Particle> neighbours) {
-
-        // Using the implementation from the "Predictor-corrector modifications" section of
-        // https://en.wikipedia.org/wiki/Beeman%27s_algorithm
-
-        Pair<Double, Vector> totalFnAndForce =force.calculate(this, neighbours);
+    /**
+     * Using the implementation from the "Predictor-corrector modifications" section from
+     * https://en.wikipedia.org/wiki/Beeman%27s_algorithm
+     *
+     * @param forceCalculator
+     * @param dt
+     * @param previousAcceleration
+     * @param neighbours
+     * @return
+     */
+    public Particle integrationStep(ForceCalculator forceCalculator, double dt, Vector previousAcceleration, Set<Particle> neighbours) {
+        Pair<Double, Vector> totalFnAndForce = forceCalculator.calculate(this, neighbours);
         Vector currentAcceleration = totalFnAndForce.second().dividedScalar(this.mass);
 
         /////// POSITION ///////
@@ -138,7 +140,7 @@ public class Particle {
         Particle predictedParticle = new Particle(this.id, this.mass, this.radius, newPosition, newSpeedPredicted);
 
         // a(t + dt)
-        Vector newAcceleration = force.calculate(predictedParticle, neighbours).second();
+        Vector newAcceleration = forceCalculator.calculate(predictedParticle, neighbours).second();
 
         // v(t + dt) (corrected) = v(t) + 5/12 a(t+dt) dt + 2/3 a(t) dt - 1/12 a(t-dt) dt;
         Vector newSpeedCorrected = speed.plusVector(newAcceleration.timesScalar(5d / 12d).timesScalar(dt)).plusVector(currentAcceleration.timesScalar(2d / 3d).timesScalar(dt)).minusVector(previousAcceleration.timesScalar(1d / 12d).timesScalar(dt));

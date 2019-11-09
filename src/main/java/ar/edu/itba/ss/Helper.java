@@ -3,20 +3,15 @@ package ar.edu.itba.ss;
 import java.util.Random;
 
 public class Helper {
-
-    private static Random random;
-//    private static final long seed = 1570750146758l; //System.currentTimeMillis();
+    //    private static final long seed = 1570750146758l; //System.currentTimeMillis();
     private static final long seed = System.currentTimeMillis();
-
-    public static Random getRandom() {
-        if (random == null) {
-            random = new Random(seed);
-        }
-
-        return random;
-    }
+    private static Random random = new Random(seed);
 
     public static double randomDouble(double min, double max) {
-        return (getRandom().nextDouble() * (max - min)) + min;
+        return (random.nextDouble() * (max - min)) + min;
+    }
+
+    public static double clamp(double value, double min, double max) {
+        return value > max ? max : value < min ? min : value;
     }
 }
