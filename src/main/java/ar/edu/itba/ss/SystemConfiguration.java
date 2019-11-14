@@ -7,7 +7,7 @@ public class SystemConfiguration {
     // Box
     public final double L = 1.5; // [1, 1.5] m
     public final double W = 0.4; // [0.3, 0.4] m
-    public final double D = 0.15; // [0.15, 0.25] m
+    public static final double D = 0.18; // [0.15, 0.25] m
     public final double fallenParticlesY = -L / 10; // m
 
     // Particle

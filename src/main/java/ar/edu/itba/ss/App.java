@@ -7,7 +7,7 @@ public class App {
 //        engine.run();
 
 
-        String name = "no static particle";
+        String name = "D = " + SystemConfiguration.D + "; multiplier = " + SystemConfiguration.obstacleCenterMultiplier;
 
         for (int i = 0; i < 3; i++) {
             System.out.println("i = " + i);
