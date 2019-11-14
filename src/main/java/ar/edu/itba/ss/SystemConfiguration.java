@@ -7,8 +7,7 @@ public class SystemConfiguration {
     // Box
     public final double L = 1.5; // [1, 1.5] m
     public final double W = 0.4; // [0.3, 0.4] m
-    //    public static final double D = 0.15; // [0.15, 0.25] m
-    public final double D = 0.10; // [0.15, 0.25] m
+    public final double D = 0.15; // [0.15, 0.25] m
     public final double fallenParticlesY = -L / 10; // m
 
     // Particle
@@ -19,27 +18,28 @@ public class SystemConfiguration {
     // Hole
 
     // General
-    public final double totalTime = 10; // s
+    public final double totalTime = 6; // s
     public final int addParticlesAttempts = 400;
     public final double k_n = Math.pow(10, 5); // N/m
     public final double k_t = 400000;
     public final int gamma = 70; // kg/s
     public final double g = 9.8; // m/seg
 
-    public final double dt = 0.1 * Math.sqrt(this.mass / k_n);
-    //    public final double dt = 0.00005d; //s
+    //        public final double dt = 0.1 * Math.sqrt(this.mass / k_n);
+    public final double dt = 0.00001d; //s
     public final double dt2 = 0.016d; // s
 
 
     // OBSTACLE
-    public final Vector obstacleCenter = new Vector(W / 2, D + (14 * maxRadius));
-    public final double obstacleRadius = D;
+    public final double obstacleRadius = 3 * (maxRadius + minRadius) / 2;
+    public static final int obstacleCenterMultiplier = 2;
+    public final Vector obstacleCenter = new Vector(W / 2 + obstacleRadius * 2, obstacleRadius * obstacleCenterMultiplier);
 
     // CURVED WALLS
     public final double curvedWallY = L / 2;
 
     // Angle in degrees
-    public final double curvedWallAngle = 20;
+    public final double curvedWallAngle = 0;
 
     public final double wallParticleRadius = 0.0045;
 

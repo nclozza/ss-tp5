@@ -1,6 +1,7 @@
 package ar.edu.itba.ss;
 
 import ar.edu.itba.ss.model.ForceCalculator;
+import ar.edu.itba.ss.model.Pair;
 import ar.edu.itba.ss.model.Particle;
 import ar.edu.itba.ss.model.Vector;
 
@@ -9,9 +10,11 @@ import java.util.stream.Collectors;
 
 public class Engine {
     SystemConfiguration systemConfiguration;
+    Output output;
 
-    public Engine(SystemConfiguration systemConfiguration) {
+    public Engine(final SystemConfiguration systemConfiguration, final Output output) {
         this.systemConfiguration = systemConfiguration;
+        this.output = output;
     }
 
     public void run() {
@@ -20,23 +23,26 @@ public class Engine {
         Map<Integer, Vector> previousAccelerations = new HashMap<>();
         Set<Particle> particles = generateParticles();
         List<Set<Particle>> particlesToPrint = new ArrayList<>();
+        List<Pair<Double, Double>> energyToPrint = new ArrayList<>();
+        List<Double> fallenParticlesToPrint = new ArrayList<>();
 
         Neighbour neighbour = new Neighbour(systemConfiguration, 0);
 
         System.out.println("Starting stuff: " + time);
-        Output.writeParticles(systemConfiguration, particles);
+        output.writeParticles(systemConfiguration, particles);
 
         while (time < systemConfiguration.totalTime) {
             particles = integrate(neighbour, previousAccelerations, particles);
-            particles = removeAndReAddFallenParticles(time, particles);
+            particles = removeAndReAddFallenParticles(time, particles, fallenParticlesToPrint);
 
             double kineticEnergy = particles.stream().collect(Collectors.summingDouble(particle -> particle.kineticEnergy()));
 
             if (auxTime >= systemConfiguration.dt2) {
                 auxTime = 0;
                 particlesToPrint.add(particles);
+                energyToPrint.add(Pair.of(time, kineticEnergy));
 //                Output.writeParticles(systemConfiguration, particles);
-//                Output.writeEnergy(time, kineticEnergy);
+//                output.writeEnergy(time, kineticEnergy);
                 System.out.println("Time: " + time);
 //                System.out.println(kineticEnergy);
             } else {
@@ -48,7 +54,9 @@ public class Engine {
             time += systemConfiguration.dt;
         }
 
-        Output.writeManyParticles(systemConfiguration, particlesToPrint);
+        output.writeManyParticles(systemConfiguration, particlesToPrint);
+        output.writeManyEnergy(energyToPrint);
+        output.writeManyFallenParticles(fallenParticlesToPrint);
     }
 
 
@@ -137,7 +145,7 @@ public class Engine {
         return false;
     }
 
-    private Set<Particle> removeAndReAddFallenParticles(double time, Set<Particle> particles) {
+    private Set<Particle> removeAndReAddFallenParticles(final double time, Set<Particle> particles, final List<Double> fallenParticlesToPrint) {
         Set<Particle> newParticles = new HashSet<>();
 
         Set<Particle> fallenParticles = new HashSet<>();
@@ -155,7 +163,7 @@ public class Engine {
         for (Particle fallenParticle : fallenParticles) {
             Particle newParticle = relocateFallenParticle(fallenParticle, newParticles);
             newParticles.add(newParticle);
-            Output.writeFallenParticleTime(time);
+            fallenParticlesToPrint.add(time);
         }
 
         return newParticles;

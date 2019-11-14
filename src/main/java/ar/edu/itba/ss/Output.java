@@ -1,5 +1,6 @@
 package ar.edu.itba.ss;
 
+import ar.edu.itba.ss.model.Pair;
 import ar.edu.itba.ss.model.Particle;
 import ar.edu.itba.ss.model.Vector;
 
@@ -10,53 +11,48 @@ import java.util.List;
 import java.util.Set;
 
 public class Output {
-    private static PrintWriter writer;
-    private static PrintWriter xyzWriter;
-    private static PrintWriter fallenParticlesWriter;
-
-
-    static {
-        try {
-            FileWriter file = new FileWriter("output.xyz");
-            xyzWriter = new PrintWriter(file, false);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    static {
-        try {
-            fallenParticlesWriter = new PrintWriter("fallen_particles.txt", "UTF-8");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        try {
-            writer = new PrintWriter("energy.txt", "UTF-8");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-    }
+    private PrintWriter energyWriter;
+    private PrintWriter xyzWriter;
+    private PrintWriter fallenParticlesWriter;
 
     private static List<Particle> wallParticles;
     private static List<Particle> obstacleParticles;
 
+    public Output(final String energyWriter, final String xyzWriter, final String fallenParticlesWriter) {
+        try {
 
-    public static void writeEnergy(double time, double energy) {
-        writer.println(time + "," + energy);
-        writer.flush();
+            this.energyWriter = new PrintWriter(energyWriter + ".txt", "UTF-8");
+            this.xyzWriter = new PrintWriter(xyzWriter + ".xyz", "UTF-8");
+            this.fallenParticlesWriter = new PrintWriter(fallenParticlesWriter + ".txt", "UTF-8");
+        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 
-    public static void writeManyParticles(SystemConfiguration systemConfiguration, final List<Set<Particle>> allParticles) {
+    public void writeEnergy(double time, double energy) {
+        energyWriter.println(time + "," + energy);
+        energyWriter.flush();
+    }
+
+    public void writeManyParticles(SystemConfiguration systemConfiguration, final List<Set<Particle>> allParticles) {
         allParticles.forEach(particles -> writeParticles(systemConfiguration, particles));
         xyzWriter.flush();
         xyzWriter.close();
     }
 
-    public static void writeParticles(SystemConfiguration systemConfiguration, final Set<Particle> particles) {
+    public void writeManyEnergy(final List<Pair<Double, Double>> allEnergy) {
+        allEnergy.forEach(energy -> writeEnergy(energy.a, energy.b));
+        energyWriter.flush();
+        energyWriter.close();
+    }
+
+    public void writeManyFallenParticles(final List<Double> allFallenParticles) {
+        allFallenParticles.forEach(this::writeFallenParticleTime);
+        fallenParticlesWriter.flush();
+        fallenParticlesWriter.close();
+    }
+
+    public void writeParticles(SystemConfiguration systemConfiguration, final Set<Particle> particles) {
         List<Particle> wallParticles = generateWallParticles(systemConfiguration);
         List<Particle> obstacleParticles = generateObstacleParticles(systemConfiguration);
 
@@ -78,11 +74,13 @@ public class Output {
 
         // Real particles
         for (Particle particle : particles) {
-            xyzWriter.println(particle.print(maximumPressure));
+            xyzWriter.println(particle.print(maximumPressure != 0 ? maximumPressure : 1));
         }
+
+        xyzWriter.flush();
     }
 
-    private static List<Particle> generateWallParticles(SystemConfiguration systemConfiguration) {
+    private List<Particle> generateWallParticles(SystemConfiguration systemConfiguration) {
         if (wallParticles != null) {
             return wallParticles;
         }
@@ -130,7 +128,7 @@ public class Output {
         return wallParticles;
     }
 
-    private static List<Particle> generateObstacleParticles(SystemConfiguration systemConfiguration) {
+    private List<Particle> generateObstacleParticles(SystemConfiguration systemConfiguration) {
         if (obstacleParticles != null) {
             return obstacleParticles;
         }
@@ -148,8 +146,9 @@ public class Output {
         return obstacleParticles;
     }
 
-    public static void writeFallenParticleTime(double time) {
+    public void writeFallenParticleTime(double time) {
         fallenParticlesWriter.println(time);
+        fallenParticlesWriter.flush();
     }
 
 
