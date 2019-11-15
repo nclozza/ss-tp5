@@ -26,13 +26,13 @@ public class Engine {
         List<Pair<Double, Double>> energyToPrint = new ArrayList<>();
         List<Double> fallenParticlesToPrint = new ArrayList<>();
 
-        Neighbour neighbour = new Neighbour(systemConfiguration, 0);
+        CellIndexMethod cellIndexMethod = new CellIndexMethod(systemConfiguration, 0);
 
         System.out.println("Starting stuff: " + time);
         output.writeParticles(systemConfiguration, particles);
 
         while (time < systemConfiguration.totalTime) {
-            particles = integrate(neighbour, previousAccelerations, particles);
+            particles = integrate(cellIndexMethod, previousAccelerations, particles);
             particles = removeAndReAddFallenParticles(time, particles, fallenParticlesToPrint);
 
             double kineticEnergy = particles.stream().collect(Collectors.summingDouble(particle -> particle.kineticEnergy()));
@@ -60,19 +60,19 @@ public class Engine {
     }
 
 
-    public Set<Particle> integrate(Neighbour neighbour, Map<Integer, Vector> previousAccelerations, Set<Particle> allParticles) {
-        Map<Integer, Set<Particle>> allNeighbours = neighbour.getNeighbours(allParticles);
+    public Set<Particle> integrate(CellIndexMethod cellIndexMethod, Map<Integer, Vector> previousAccelerations, Set<Particle> allParticles) {
+        Map<Integer, Set<Particle>> allNearParticles = cellIndexMethod.getNearParticles(allParticles);
         Set<Particle> newParticles = new HashSet<>();
         ForceCalculator forceCalculator = new ForceCalculator(systemConfiguration);
 
         for (Particle particle : allParticles) {
-            Set<Particle> neighboursForParticle = allNeighbours.get(particle.id);
+            Set<Particle> nearParticleForSpecificParticle = allNearParticles.get(particle.id);
             Vector previousAcceleration = previousAccelerations.getOrDefault(particle.id, new Vector(0, 0));
 
-            Particle newParticle = particle.integrationStep(forceCalculator, systemConfiguration.dt, previousAcceleration, neighboursForParticle);
+            Particle newParticle = particle.integrationStep(forceCalculator, systemConfiguration.dt, previousAcceleration, nearParticleForSpecificParticle);
             newParticles.add(newParticle);
 
-            previousAccelerations.put(particle.id, forceCalculator.calculate(particle, neighboursForParticle).second().dividedScalar(particle.mass));
+            previousAccelerations.put(particle.id, forceCalculator.calculate(particle, nearParticleForSpecificParticle).second().dividedScalar(particle.mass));
         }
 
         return newParticles;

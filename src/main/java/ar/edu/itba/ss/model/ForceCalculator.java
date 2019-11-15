@@ -12,11 +12,11 @@ public class ForceCalculator {
         this.systemConfiguration = systemConfiguration;
     }
 
-    public Pair<Double, Vector> calculate(final Particle particle, final Set<Particle> neighbours) {
+    public Pair<Double, Vector> calculate(final Particle particle, final Set<Particle> nearParticles) {
         Pair<Double, Vector> forcePair = Pair.of(0d, new Vector(0, -particle.mass * systemConfiguration.g));
 
 
-        for (Particle other : neighbours) {
+        for (Particle other : nearParticles) {
             Pair<Double, Vector> particleForce = particleForce(particle, other);
             forcePair = addPairs(forcePair, particleForce);
         }

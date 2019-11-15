@@ -105,18 +105,8 @@ public class Particle {
         return position.hashCode() + speed.hashCode();
     }
 
-    /**
-     * Using the implementation from the "Predictor-corrector modifications" section from
-     * https://en.wikipedia.org/wiki/Beeman%27s_algorithm
-     *
-     * @param forceCalculator
-     * @param dt
-     * @param previousAcceleration
-     * @param neighbours
-     * @return
-     */
-    public Particle integrationStep(ForceCalculator forceCalculator, double dt, Vector previousAcceleration, Set<Particle> neighbours) {
-        Pair<Double, Vector> totalFnAndForce = forceCalculator.calculate(this, neighbours);
+    public Particle integrationStep(ForceCalculator forceCalculator, double dt, Vector previousAcceleration, Set<Particle> nearParticles) {
+        Pair<Double, Vector> totalFnAndForce = forceCalculator.calculate(this, nearParticles);
         Vector currentAcceleration = totalFnAndForce.second().dividedScalar(this.mass);
 
         /////// POSITION ///////
@@ -140,7 +130,7 @@ public class Particle {
         Particle predictedParticle = new Particle(this.id, this.mass, this.radius, newPosition, newSpeedPredicted);
 
         // a(t + dt)
-        Vector newAcceleration = forceCalculator.calculate(predictedParticle, neighbours).second();
+        Vector newAcceleration = forceCalculator.calculate(predictedParticle, nearParticles).second();
 
         // v(t + dt) (corrected) = v(t) + 5/12 a(t+dt) dt + 2/3 a(t) dt - 1/12 a(t-dt) dt;
         Vector newSpeedCorrected = speed.plusVector(newAcceleration.timesScalar(5d / 12d).timesScalar(dt)).plusVector(currentAcceleration.timesScalar(2d / 3d).timesScalar(dt)).minusVector(previousAcceleration.timesScalar(1d / 12d).timesScalar(dt));

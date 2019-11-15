@@ -5,14 +5,13 @@ import java.util.Set;
 
 public class Cell {
 
-    private final int x;
-    private final int y;
+    public int x;
+    public int y;
     private Set<Particle> particles;
 
     public Cell(int x, int y) {
         this.x = x;
         this.y = y;
-
         this.particles = new HashSet<>();
     }
 
@@ -20,19 +19,23 @@ public class Cell {
         return x;
     }
 
+    public void setX(int x) {
+        this.x = x;
+    }
+
     public int getY() {
         return y;
+    }
+
+    public void setY(int y) {
+        this.y = y;
     }
 
     public Set<Particle> getParticles() {
         return particles;
     }
 
-    public void addParticle(Particle p) {
-        particles.add(p);
-    }
-
-    public void clearParticles() {
-        particles.clear();
+    public void setParticles(Set<Particle> particles) {
+        this.particles = particles;
     }
 }
