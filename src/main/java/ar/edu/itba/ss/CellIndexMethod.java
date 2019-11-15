@@ -17,8 +17,8 @@ class CellIndexMethod {
     private static final int[] MOVES_X = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
     private static final int[] MOVES_Y = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
 
-    CellIndexMethod(SystemConfiguration systemConfiguration, final double interactionRadius) {
-        this.cellWidth = 2 * systemConfiguration.maxRadius + interactionRadius;
+    CellIndexMethod(SystemConfiguration systemConfiguration, final double radius) {
+        this.cellWidth = 2 * systemConfiguration.maxRadius + radius;
         this.gridWidth = (int) Math.ceil(systemConfiguration.W / cellWidth);
         this.gridHeight = (int) Math.ceil(systemConfiguration.L / cellWidth);
         this.notInteractParticles = new HashSet<>();
